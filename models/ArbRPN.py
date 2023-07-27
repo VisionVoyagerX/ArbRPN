@@ -162,10 +162,6 @@ class ArbRPN(nn.Module):
             HR_ms: a list of HR ms images,
         '''
 
-        if mask is None:
-            mask = [1 for _ in range(ms.shape[1])]
-            is_cat_out = True
-
         ms = ms.split(1, dim=1)
         pan_state = self.wrapper(pan)
         hidden_state = pan_state
@@ -174,7 +170,7 @@ class ArbRPN(nn.Module):
         backward_hidden = []
         for idx, band in enumerate(ms):
             band = F.interpolate(
-                band[:mask[idx]], scale_factor=4, mode='bicubic', align_corners=False)
+                band, scale_factor=4, mode='bicubic', align_corners=False)
             blur_ms_list.append(band)
             backward_hidden.append(self.conv1(band))
 
@@ -183,9 +179,9 @@ class ArbRPN(nn.Module):
             # forward recurrence
             forward_hidden = []
             for idx in range(len(blur_ms_list)):
-                hidden_state = hidden_state[:mask[idx]]
+                hidden_state = hidden_state[:]
                 band = torch.cat(
-                    (backward_hidden[-(idx+1)], hidden_state, pan_state[:mask[idx]]), dim=1)
+                    (backward_hidden[-(idx+1)], hidden_state, pan_state[:]), dim=1)
                 hidden_state = self.hidden_unit_forward_list[idx_cycle](band)
                 forward_hidden.append(hidden_state)
             # backward recurrence
@@ -193,9 +189,9 @@ class ArbRPN(nn.Module):
             for idx in range(len(blur_ms_list)):
                 start_pan_stat = hidden_state.shape[0]
                 hidden_state = torch.cat(
-                    (hidden_state, pan_state[start_pan_stat:mask[-(idx+1)]]), dim=0)
+                    (hidden_state, pan_state[start_pan_stat:]), dim=0)
                 band = torch.cat(
-                    (forward_hidden[-(idx + 1)], hidden_state, pan_state[:mask[-(idx+1)]]), dim=1)
+                    (forward_hidden[-(idx + 1)], hidden_state, pan_state[:]), dim=1)
                 hidden_state = self.hidden_unit_backward_list[idx_cycle](band)
                 backward_hidden.append(hidden_state)
 
@@ -227,8 +223,8 @@ class myloss(nn.Module):
 
 if __name__ == "__main__":
     model = ArbRPN()
-    lr = torch.randn(1, 4, 16, 16)
-    pan = torch.randn(1, 1, 64, 64)
+    lr = torch.randn(8, 4, 16, 16)
+    pan = torch.randn(8, 1, 64, 64)
     result = model(pan, lr)
     print(result.shape)
     print(1)

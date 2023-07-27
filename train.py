@@ -24,7 +24,7 @@ def main():
     train_dataset = GaoFen2(
         Path("/home/ubuntu/project/Data/GaoFen-2/train/train_gf2-001.h5"))  # transforms=[(RandomHorizontalFlip(1), 0.3), (RandomVerticalFlip(1), 0.3)]
     train_loader = DataLoader(
-        dataset=train_dataset, batch_size=4, shuffle=True, drop_last=True)
+        dataset=train_dataset, batch_size=8, shuffle=True, drop_last=True)
 
     validation_dataset = GaoFen2(
         Path("/home/ubuntu/project/Data/GaoFen-2/val/valid_gf2.h5"))
