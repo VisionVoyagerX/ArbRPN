@@ -68,13 +68,13 @@ def main():
     best_eval_psnr = 0
     best_test_psnr = 0
     current_daytime = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    steps = 400000
+    steps = 200000
     save_interval = 1000
     report_interval = 50
-    test_intervals = [50000, 100000, 150000,
-                      200000, 250000, 300000, 350000, 400000]
-    evaluation_interval = [50000, 100000, 150000,
-                           200000, 250000, 300000, 350000, 400000]
+    test_intervals = [25000, 50000, 75000, 100000, 125000,
+                      150000, 175000, 200000]
+    evaluation_interval = [25000, 50000, 75000, 100000, 125000,
+                           150000, 175000, 200000]
 
     val_steps = 100
 
@@ -83,7 +83,7 @@ def main():
             dtypes=[torch.float32, torch.float32])
 
     scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
-    lr_decay_intervals = [100000, 200000, 300000, 350000]
+    lr_decay_intervals = [50000, 100000, 15000, 175000]
 
     print('==> Starting training ...')
     train_iter = iter(train_loader)

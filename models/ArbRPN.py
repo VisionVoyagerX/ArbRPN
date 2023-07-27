@@ -72,7 +72,7 @@ class ArbRPN(nn.Module):
 
         self.conv2 = nn.Conv2d(hid_dim, 1, 3, 1, 1)
 
-        self.apply(self.init_weights)
+        # self.apply(self.init_weights)
 
         ####################
         # initialize
