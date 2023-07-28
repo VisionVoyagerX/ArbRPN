@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import StepLR
 from torchinfo import summary
 
 from data_loader.DataLoader import DIV2K, GaoFen2, Sev2Mod, WV3, GaoFen2panformer
-from models.ArbRPN import GPPNN
+from models.ArbRPN import ArbRPN
 from utils import *
 
 
@@ -37,10 +37,10 @@ def main():
         dataset=test_dataset, batch_size=1, shuffle=False)
 
     # Initialize Model, optimizer, criterion and metrics
-    model = GPPNN(4, 1, 64, 8, mslr_mean=train_dataset.mslr_mean.to(device), mslr_std=train_dataset.mslr_std.to(device), pan_mean=train_dataset.pan_mean.to(device),
-                  pan_std=train_dataset.pan_std.to(device)).to(device)
+    model = ArbRPN(mslr_mean=train_dataset.mslr_mean.to(device), mslr_std=train_dataset.mslr_std.to(device), pan_mean=train_dataset.pan_mean.to(device),
+                   pan_std=train_dataset.pan_std.to(device)).to(device)
 
-    optimizer = Adam(model.parameters(), lr=5e-4, weight_decay=0)
+    optimizer = Adam(model.parameters(), lr=0.0001, weight_decay=0)
 
     criterion = L1Loss().to(device)
 
@@ -68,25 +68,25 @@ def main():
     best_eval_psnr = 0
     best_test_psnr = 0
     current_daytime = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    steps = 250000
+    steps = 200000
     save_interval = 1000
     report_interval = 50
-    test_intervals = [40000, 60000, 100000,
-                      140000, 160000, 200000]
-    evaluation_interval = [40000, 60000, 100000,
-                           140000, 160000, 200000]
+    test_intervals = [25000, 50000, 75000, 100000, 125000,
+                      150000, 175000, 200000]
+    evaluation_interval = [25000, 50000, 75000, 100000, 125000,
+                           150000, 175000, 200000]
 
     val_steps = 100
 
-    # summary(model, pan_example, mslr_example, verbose=1)
-    summary(model, [(1, 1, 256, 256), (1, 4, 64, 64)],
+    # Model summary
+    summary(model, [(1, 1, 256, 256), (1, 8, 64, 64)],
             dtypes=[torch.float32, torch.float32])
 
     scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
-    lr_decay_intervals = 50000
+    lr_decay_intervals = [50000, 100000, 15000, 175000]
 
     continue_from_checkpoint = True
-    checkpoint_path = 'checkpoints/gppnn_GF2/gppnn_2023_07_25-18_15_08.pth.tar'
+    checkpoint_path = 'checkpoints/ArbRPN_GF2/ArbRPN_GF2_2023_07_27-15_22_08.pth.tar'
 
     # load checkpoint
     if continue_from_checkpoint:
