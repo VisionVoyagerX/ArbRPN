@@ -21,18 +21,18 @@ def main():
     print(device)
 
     # Initialize DataLoader
-    train_dataset = GaoFen2(
-        Path("/home/ubuntu/project/Data/GaoFen-2/train/train_gf2-001.h5"))  # transforms=[(RandomHorizontalFlip(1), 0.3), (RandomVerticalFlip(1), 0.3)]
+    train_dataset = WV3(
+        Path("/home/ubuntu/project/Data/WorldView3/train/train_wv3-001.h5"))  # transforms=[(RandomHorizontalFlip(1), 0.3), (RandomVerticalFlip(1), 0.3)]
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=8, shuffle=True, drop_last=True)
 
-    validation_dataset = GaoFen2(
-        Path("/home/ubuntu/project/Data/GaoFen-2/val/valid_gf2.h5"))
+    validation_dataset = WV3(
+        Path("/home/ubuntu/project/Data/WorldView3/val/valid_wv3.h5"))
     validation_loader = DataLoader(
         dataset=validation_dataset, batch_size=1, shuffle=True)
 
-    test_dataset = GaoFen2(
-        Path("/home/ubuntu/project/Data/GaoFen-2/drive-download-20230623T170619Z-001/test_gf2_multiExm1.h5"))
+    test_dataset = WV3(
+        Path("/home/ubuntu/project/Data/WorldView3/drive-download-20230627T115841Z-001/test_wv3_multiExm1.h5"))
     test_loader = DataLoader(
         dataset=test_dataset, batch_size=1, shuffle=False)
 
@@ -79,7 +79,7 @@ def main():
     val_steps = 100
 
     # Model summary
-    summary(model, [(1, 1, 256, 256), (1, 4, 64, 64)],
+    summary(model, [(1, 1, 256, 256), (1, 8, 64, 64)],
             dtypes=[torch.float32, torch.float32])
 
     scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
@@ -97,7 +97,7 @@ def main():
                           'tr_metrics': tr_metrics,
                           'val_metrics': val_metrics,
                           'test_metrics': test_metrics}
-            save_checkpoint(checkpoint, 'ArbRPN_GF2', current_daytime)
+            save_checkpoint(checkpoint, 'ArbRPN_WV3', current_daytime)
 
         try:
             # Samples the batch
@@ -204,7 +204,7 @@ def main():
                               'tr_metrics': tr_metrics,
                               'val_metrics': val_metrics,
                               'test_metrics': test_metrics}
-                save_checkpoint(checkpoint, 'ArbRPN_GF2',
+                save_checkpoint(checkpoint, 'ArbRPN_WV3',
                                 current_daytime + '_best_eval')
 
         # test model
@@ -255,7 +255,7 @@ def main():
                               'tr_metrics': tr_metrics,
                               # 'val_metrics': val_metrics,
                               'test_metrics': test_metrics}
-                save_checkpoint(checkpoint, 'ArbRPN_GF2',
+                save_checkpoint(checkpoint, 'ArbRPN_WV3',
                                 current_daytime + '_best_test')
 
     print('==> training ended <==')
