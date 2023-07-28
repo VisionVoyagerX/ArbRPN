@@ -24,18 +24,18 @@ def main():
     print(device)
 
     # Initialize DataLoader
-    train_dataset = WV3(
-        Path("/home/ubuntu/project/Data/WorldView3/train/train_wv3-001.h5"))  # transforms=[(RandomHorizontalFlip(1), 0.3), (RandomVerticalFlip(1), 0.3)]
+    train_dataset = GaoFen2(
+        Path("/home/ubuntu/project/Data/GaoFen-2/train/train_gf2-001.h5"))  # transforms=[(RandomHorizontalFlip(1), 0.3), (RandomVerticalFlip(1), 0.3)]
     train_loader = DataLoader(
         dataset=train_dataset, batch_size=4, shuffle=True, drop_last=True)
 
-    validation_dataset = WV3(
-        Path("/home/ubuntu/project/Data/WorldView3/val/valid_wv3.h5"))
+    validation_dataset = GaoFen2(
+        Path("/home/ubuntu/project/Data/GaoFen-2/val/valid_gf2.h5"))
     validation_loader = DataLoader(
         dataset=validation_dataset, batch_size=1, shuffle=True)
 
-    test_dataset = WV3(
-        Path("/home/ubuntu/project/Data/WorldView3/drive-download-20230627T115841Z-001/test_wv3_multiExm1.h5"))
+    test_dataset = GaoFen2(
+        Path("/home/ubuntu/project/Data/GaoFen-2/drive-download-20230623T170619Z-001/test_gf2_multiExm1.h5"))
     test_loader = DataLoader(
         dataset=test_dataset, batch_size=1, shuffle=False)
 
@@ -92,13 +92,13 @@ def main():
     # load checkpoint
     if continue_from_checkpoint:
         tr_metrics, val_metrics = load_checkpoint(torch.load(
-            'checkpoints/ArbRPN_WV3/ArbRPN_WV3_2023_07_28-01_12_12.pth.tar'), model, optimizer, tr_metrics, val_metrics)
+            'checkpoints/ArbRPN_GF2/ArbRPN_GF2_2023_07_27-15_22_08.pth.tar'), model, optimizer, tr_metrics, val_metrics)
         print('Model Loaded ...')
 
     def scaleMinMax(x):
         return ((x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x)))
 
-    idx = 14
+    idx = 15
     # evaluation mode
     model.eval()
     with torch.no_grad():
@@ -138,14 +138,14 @@ def main():
                 axis[3].set_title('(d) GT')
                 axis[3].axis("off")
 
-                plt.savefig('results/Images_WV3.png')
+                plt.savefig('results/Images_GF2.png')
 
                 mslr = mslr.permute(0, 3, 2, 1).detach().cpu().numpy()
                 pan = pan.permute(0, 3, 2, 1).detach().cpu().numpy()
                 mssr = mssr.permute(0, 3, 2, 1).detach().cpu().numpy()
                 gt = mshr.permute(0, 3, 2, 1).detach().cpu().numpy()
 
-                np.savez('results/img_array_WV3.npz', mslr=mslr,
+                np.savez('results/img_array_GF2.npz', mslr=mslr,
                          pan=pan, mssr=mssr, gt=gt)
 
 
