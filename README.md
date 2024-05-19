@@ -1,12 +1,12 @@
 # ArbRPN
-ArbRPN implemented in pytorch 
+ArbRPN implementation in pytorch 
 
-Pretrained model is provided
+Pretrained models on the GaoFen-2 and WorldView-3 datasets are provided
 
-Based on implementation: https://github.com/Lihui-Chen/ArbRPN
+Based on the original implementation: https://github.com/Lihui-Chen/ArbRPN
 
 Paper link: https://ieeexplore.ieee.org/document/9627886
 
 # Dataset
 
-The GaoFen-2 and WorldView-3 dataset download links can be found in https://github.com/liangjiandeng/PanCollection
+The GaoFen-2 and WorldView-3 dataset download links can be found at https://github.com/liangjiandeng/PanCollection
