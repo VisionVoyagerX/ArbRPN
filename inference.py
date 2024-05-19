@@ -126,6 +126,8 @@ def main():
     def scaleMinMax(x):
         return ((x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x)))
 
+    test_metric_collection.reset()
+
     # evaluation mode
     model.eval()
     with torch.no_grad():
@@ -138,17 +140,10 @@ def main():
             test_loss = criterion(mssr, mshr)
             test_metric = test_metric_collection.forward(mssr, mshr)
             test_report_loss += test_loss
-
-            # compute metrics
-            test_metric = test_metric_collection.compute()
-            test_metric_collection.reset()
-
             
             ergas_score += ergas_batch(mshr, mssr, ergas_l)
             sam_score += sam_batch(mshr, mssr)
             q2n_score += q2n_batch(mshr, mssr)
-            psnr_score += test_metric['psnr'].item()
-            ssim_score += test_metric['ssim'].item()
 
             figure, axis = plt.subplots(nrows=1, ncols=4, figsize=(15, 5))
             axis[0].imshow((scaleMinMax(mslr.permute(0, 3, 2, 1).detach().cpu()[
@@ -182,13 +177,18 @@ def main():
             np.savez(f'results/img_array_{choose_dataset}_{i}.npz', mslr=mslr,
                      pan=pan, mssr=mssr, gt=gt)
 
+        # compute metrics
+        test_metric = test_metric_collection.compute()
+        test_metric_collection.reset()
+
+
         # Print final scores
         print(f"Final scores:\n"
                 f"ERGAS: {ergas_score / (i+1)}\n"
                 f"SAM: {sam_score / (i+1)}\n"
                 f"Q2n: {q2n_score / (i+1)}\n"
-                f"PSNR: {psnr_score / (i+1)}\n"
-                f"SSIM: {ssim_score / (i+1)}")
+                f"PSNR: {test_metric['psnr'].item()}\n"
+                f"SSIM: {test_metric['ssim'].item()}")
 
 if __name__ == '__main__':
     main()
