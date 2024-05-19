@@ -1,16 +1,15 @@
 from pathlib import Path
-from tqdm import tqdm
 
 import torch
 from torch.optim import Adam
 from torch.nn import L1Loss
 from torch.utils.data import DataLoader
-from torchvision.transforms import Resize, RandomHorizontalFlip, RandomVerticalFlip, RandomRotation
+from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip
 from torchmetrics import MetricCollection, PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
 from torch.optim.lr_scheduler import StepLR
 from torchinfo import summary
 
-from data_loader.DataLoader import DIV2K, GaoFen2, Sev2Mod, WV3, GaoFen2panformer
+from data_loader.DataLoader import GaoFen2, WV3, Sev2Mod
 from models.ArbRPN import ArbRPN
 from utils import *
 import matplotlib.pyplot as plt
@@ -19,22 +18,24 @@ import numpy as np
 
 def main():
 
-    choose_dataset = 'GaoFen2'  # or 'WV3'
+    choose_dataset = 'GaoFen2'  # choose dataset
 
     if choose_dataset == 'GaoFen2':
         dataset = eval('GaoFen2')
-        tr_dir = '/home/ubuntu/project/Data/GaoFen-2/train/train_gf2-001.h5'
-        eval_dir = '/home/ubuntu/project/Data/GaoFen-2/val/valid_gf2.h5'
-        test_dir = '/home/ubuntu/project/Data/GaoFen-2/drive-download-20230623T170619Z-001/test_gf2_multiExm1.h5'
+        tr_dir = '../pansharpenning_dataset/GF2/train/train_gf2.h5'
+        eval_dir = '../pansharpenning_dataset/GF2/val/valid_gf2.h5'
+        test_dir = '../pansharpenning_dataset/GF2/test/test_gf2_multiExm1.h5'
         checkpoint_dir = 'checkpoints/ArbRPN_GF2/ArbRPN_GF2_2023_07_27-15_22_08.pth.tar'
         ms_channel = 4
+        ergas_l = 4
     elif choose_dataset == 'WV3':
         dataset = eval('WV3')
-        tr_dir = '/home/ubuntu/project/Data/WorldView3/train/train_wv3-001.h5'
-        eval_dir = '/home/ubuntu/project/Data/WorldView3/val/valid_wv3.h5'
-        test_dir = '/home/ubuntu/project/Data/WorldView3/drive-download-20230627T115841Z-001/test_wv3_multiExm1.h5'
+        tr_dir = '../pansharpenning_dataset/WV3/train/train_wv3.h5'
+        eval_dir = '../pansharpenning_dataset/WV3/val/valid_wv3.h5'
+        test_dir = '../pansharpenning_dataset/WV3/test/test_wv3_multiExm1.h5'
         checkpoint_dir = 'checkpoints/ArbRPN_WV3/ArbRPN_WV3_2023_07_28-01_12_12.pth.tar'
         ms_channel = 8
+        ergas_l = 4
     else:
         print(choose_dataset, ' does not exist')
 
@@ -88,6 +89,13 @@ def main():
     tr_metrics = []
     val_metrics = []
     test_metrics = []
+
+    ergas_score = 0
+    sam_score = 0
+    q2n_score = 0
+    psnr_score = 0
+    ssim_score = 0
+    
     best_eval_psnr = 0
     best_test_psnr = 0
     current_daytime = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
@@ -102,8 +110,8 @@ def main():
     val_steps = 100
 
     # Model summary
-    '''summary(model, [(1, 1, 256, 256), (1, 8, 64, 64)],
-            dtypes=[torch.float32, torch.float32])'''
+    summary(model, [(1, 1, 256, 256), (1, ms_channel, 64, 64)],
+            dtypes=[torch.float32, torch.float32])
 
     scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
     lr_decay_intervals = [50000, 100000, 15000, 175000]
@@ -134,6 +142,13 @@ def main():
             # compute metrics
             test_metric = test_metric_collection.compute()
             test_metric_collection.reset()
+
+            
+            ergas_score += ergas_batch(mshr, mssr, ergas_l)
+            sam_score += sam_batch(mshr, mssr)
+            q2n_score += q2n_batch(mshr, mssr)
+            psnr_score += test_metric['psnr'].item()
+            ssim_score += test_metric['ssim'].item()
 
             figure, axis = plt.subplots(nrows=1, ncols=4, figsize=(15, 5))
             axis[0].imshow((scaleMinMax(mslr.permute(0, 3, 2, 1).detach().cpu()[
@@ -167,6 +182,13 @@ def main():
             np.savez(f'results/img_array_{choose_dataset}_{i}.npz', mslr=mslr,
                      pan=pan, mssr=mssr, gt=gt)
 
+        # Print final scores
+        print(f"Final scores:\n"
+                f"ERGAS: {ergas_score / (i+1)}\n"
+                f"SAM: {sam_score / (i+1)}\n"
+                f"Q2n: {q2n_score / (i+1)}\n"
+                f"PSNR: {psnr_score / (i+1)}\n"
+                f"SSIM: {ssim_score / (i+1)}")
 
 if __name__ == '__main__':
     main()
