@@ -6,6 +6,8 @@ from torch.nn import L1Loss
 from torch.utils.data import DataLoader
 from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip
 from torchmetrics import MetricCollection, PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
+from torchmetrics.image import SpectralAngleMapper, ErrorRelativeGlobalDimensionlessSynthesis, RelativeAverageSpectralError, SpectralDistortionIndex
+from torchmetrics.regression import MeanSquaredError
 from torch.optim.lr_scheduler import StepLR
 from torchinfo import summary
 
@@ -18,21 +20,21 @@ import numpy as np
 
 def main():
 
-    choose_dataset = 'GaoFen2'  # choose dataset
+    choose_dataset = 'WV3'  # choose dataset
 
     if choose_dataset == 'GaoFen2':
         dataset = eval('GaoFen2')
-        tr_dir = '../pansharpenning_dataset/GF2/train/train_gf2.h5'
-        eval_dir = '../pansharpenning_dataset/GF2/val/valid_gf2.h5'
-        test_dir = '../pansharpenning_dataset/GF2/test/test_gf2_multiExm1.h5'
+        tr_dir = 'data/pansharpenning_dataset/GF2/train/train_gf2.h5'
+        eval_dir = 'data/pansharpenning_dataset/GF2/val/valid_gf2.h5'
+        test_dir = 'data/pansharpenning_dataset/GF2/test/test_gf2_multiExm1.h5'
         checkpoint_dir = 'checkpoints/ArbRPN_GF2/ArbRPN_GF2_2023_07_27-15_22_08.pth.tar'
         ms_channel = 4
         ergas_l = 4
     elif choose_dataset == 'WV3':
         dataset = eval('WV3')
-        tr_dir = '../pansharpenning_dataset/WV3/train/train_wv3.h5'
-        eval_dir = '../pansharpenning_dataset/WV3/val/valid_wv3.h5'
-        test_dir = '../pansharpenning_dataset/WV3/test/test_wv3_multiExm1.h5'
+        tr_dir = 'data/pansharpenning_dataset/WV3/train/train_wv3.h5'
+        eval_dir = 'data/pansharpenning_dataset/WV3/val/valid_wv3.h5'
+        test_dir = 'data/pansharpenning_dataset/WV3/test/test_wv3_multiExm1.h5'
         checkpoint_dir = 'checkpoints/ArbRPN_WV3/ArbRPN_WV3_2023_07_28-01_12_12.pth.tar'
         ms_channel = 8
         ergas_l = 4
@@ -70,18 +72,33 @@ def main():
 
     metric_collection = MetricCollection({
         'psnr': PeakSignalNoiseRatio().to(device),
-        'ssim': StructuralSimilarityIndexMeasure().to(device)
+        'ssim': StructuralSimilarityIndexMeasure().to(device),
+        'sam': SpectralAngleMapper().to(device),
+        'ergas': ErrorRelativeGlobalDimensionlessSynthesis().to(device),
+        'rase' : RelativeAverageSpectralError().to(device),
+        'mse' : MeanSquaredError().to(device),
     })
 
     val_metric_collection = MetricCollection({
         'psnr': PeakSignalNoiseRatio().to(device),
-        'ssim': StructuralSimilarityIndexMeasure().to(device)
+        'ssim': StructuralSimilarityIndexMeasure().to(device),
+        'sam': SpectralAngleMapper().to(device),
+        'ergas': ErrorRelativeGlobalDimensionlessSynthesis().to(device),
+        'rase' : RelativeAverageSpectralError().to(device),
+        'mse' : MeanSquaredError().to(device),
     })
 
     test_metric_collection = MetricCollection({
         'psnr': PeakSignalNoiseRatio().to(device),
-        'ssim': StructuralSimilarityIndexMeasure().to(device)
+        'ssim': StructuralSimilarityIndexMeasure().to(device),
+        'sam': SpectralAngleMapper().to(device),
+        'ergas': ErrorRelativeGlobalDimensionlessSynthesis().to(device),
+        'rase' : RelativeAverageSpectralError().to(device),
+        'mse' : MeanSquaredError().to(device),
     })
+
+    sdi_metric = SpectralDistortionIndex().to(device)
+    sdi_results = []
 
     tr_report_loss = 0
     val_report_loss = 0
@@ -141,9 +158,17 @@ def main():
             test_metric = test_metric_collection.forward(mssr, mshr)
             test_report_loss += test_loss
             
-            ergas_score += ergas_batch(mshr, mssr, ergas_l)
-            sam_score += sam_batch(mshr, mssr)
-            q2n_score += q2n_batch(mshr, mssr)
+
+            # Normalize preds and target for SDI
+            # print(mssr.max())
+            preds_normalized = mssr / mssr.max()
+            target_normalized = mshr / mshr.max()
+
+            # Calculate SDI on normalized predictions and targets
+            sdi_value = sdi_metric(preds_normalized, target_normalized)
+            # print(sdi_value)
+            sdi_results.append(sdi_value.item())
+
 
             figure, axis = plt.subplots(nrows=1, ncols=4, figsize=(15, 5))
             axis[0].imshow((scaleMinMax(mslr.permute(0, 3, 2, 1).detach().cpu()[
@@ -181,14 +206,19 @@ def main():
         test_metric = test_metric_collection.compute()
         test_metric_collection.reset()
 
+        # Compute the average SDI
+        average_sdi = sum(sdi_results) / len(sdi_results)
 
         # Print final scores
         print(f"Final scores:\n"
-                f"ERGAS: {ergas_score / (i+1)}\n"
-                f"SAM: {sam_score / (i+1)}\n"
-                f"Q2n: {q2n_score / (i+1)}\n"
-                f"PSNR: {test_metric['psnr'].item()}\n"
-                f"SSIM: {test_metric['ssim'].item()}")
+              f"ERGAS: {test_metric['ergas'].item()}\n"
+              f"SAM: {test_metric['sam'].item()}\n"
+              f"PSNR: {test_metric['psnr'].item()}\n"
+              f"SSIM: {test_metric['ssim'].item()}\n"
+              f"RASE: {test_metric['rase'].item()}\n"
+              f"MSE: {test_metric['mse'].item()}\n"
+              f"D_lambda: {average_sdi:.4f}")
+
 
 if __name__ == '__main__':
     main()
